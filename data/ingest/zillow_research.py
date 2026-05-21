@@ -31,13 +31,14 @@ TARGET_ZIPS = {
 }
 
 ZILLOW_FEEDS = {
-    "zhvi_sfr": "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_sfr_tier_0.33_0.67_sm_sa_month.csv",
-    "zhvi_condo": "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_condo_tier_0.33_0.67_sm_sa_month.csv",
-    "median_list_price": "https://files.zillowstatic.com/research/public_csvs/mlp/Zip_mlp_uc_sfrcondo_week.csv",
-    "median_sale_price": "https://files.zillowstatic.com/research/public_csvs/msp/Zip_msp_uc_sfrcondo_sm_month.csv",
-    "days_on_market": "https://files.zillowstatic.com/research/public_csvs/dom/Zip_median_dom_uc_sfrcondo_sm_month.csv",
+    "zhvi_sfr":       "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_sfr_tier_0.33_0.67_sm_sa_month.csv",
+    "zhvi_sfr_upper": "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_sfr_tier_0.67_1.0_sm_sa_month.csv",
+    "zhvi_condo":     "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_condo_tier_0.33_0.67_sm_sa_month.csv",
+    "median_list_price":  "https://files.zillowstatic.com/research/public_csvs/mlp/Zip_mlp_uc_sfrcondo_week.csv",
+    "median_sale_price":  "https://files.zillowstatic.com/research/public_csvs/msp/Zip_msp_uc_sfrcondo_sm_month.csv",
+    "days_on_market":     "https://files.zillowstatic.com/research/public_csvs/dom/Zip_median_dom_uc_sfrcondo_sm_month.csv",
     "list_to_sale_ratio": "https://files.zillowstatic.com/research/public_csvs/lst/Zip_mean_lst_uc_sfrcondo_sm_month.csv",
-    "price_cut_pct": "https://files.zillowstatic.com/research/public_csvs/mpc/Zip_mpc_uc_sfrcondo_sm_month.csv",
+    "price_cut_pct":      "https://files.zillowstatic.com/research/public_csvs/mpc/Zip_mpc_uc_sfrcondo_sm_month.csv",
 }
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (research data download)"}
@@ -158,6 +159,7 @@ def ingest_market_metrics(cutoff_years: int = 3):
 def run_all():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     ingest_zhvi("zhvi_sfr")
+    ingest_zhvi("zhvi_sfr_upper")
     ingest_zhvi("zhvi_condo")
     ingest_market_metrics()
     log.info("Zillow Research ingest complete")

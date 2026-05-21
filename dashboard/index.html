@@ -19,13 +19,14 @@
   .badge { background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
   main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
   h2 { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; margin-top: 28px; }
-  /* Indicators row */
-  .indicators { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 8px; }
+  h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  /* Indicators */
+  .indicators { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
   .card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
   .card .value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; }
   .card .sub { color: var(--muted); font-size: 11px; }
-  /* Market table */
+  /* Table */
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; }
   th { background: #13161f; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--border); }
@@ -40,36 +41,63 @@
   /* Charts */
   .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-  .chart-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
-  /* Price calculator */
-  .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .calc-form { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  /* Calculator */
+  .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .calc-form { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
   .calc-result { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-section { border-top: 1px solid var(--border); padding-top: 14px; }
+  .form-section:first-child { border-top: none; padding-top: 0; }
+  .section-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-row.full { grid-template-columns: 1fr; }
   .form-group { display: flex; flex-direction: column; gap: 4px; }
   label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-  input, select { background: #13161f; border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 8px 10px; font-size: 13px; width: 100%; }
+  input[type=text], input[type=number], select {
+    background: #13161f; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 8px 10px; font-size: 13px; width: 100%;
+  }
   input:focus, select:focus { outline: none; border-color: var(--accent); }
-  .toggle-row { display: flex; gap: 16px; margin-bottom: 12px; }
+  input::placeholder { color: var(--muted); }
+  .toggle-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .toggle-item { display: flex; align-items: center; gap: 6px; cursor: pointer; }
   .toggle-item input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); }
-  button.primary { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 4px; }
+  .toggle-item span { font-size: 12px; color: var(--text); }
+  button.primary { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 11px 20px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; }
   button.primary:hover { background: #3a7be0; }
-  .result-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+  button.secondary:hover { background: rgba(79,142,247,.1); }
+  /* Result rows */
+  .result-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
   .result-row:last-child { border-bottom: none; }
   .result-label { color: var(--muted); font-size: 12px; }
-  .result-val { font-weight: 700; font-size: 16px; }
+  .result-val { font-weight: 700; font-size: 15px; }
   .result-val.big { font-size: 26px; color: var(--green); }
   .result-val.accent { color: var(--accent); }
   .strategy-badge { border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
   .strategy-badge.aggressive { background: rgba(251,191,36,.15); color: var(--yellow); }
   .strategy-badge.market     { background: rgba(79,142,247,.12); color: var(--accent); }
   .strategy-badge.conservative { background: rgba(148,163,184,.12); color: var(--muted); }
-  .factor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  /* Assessment badges */
+  .assess-badge { border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+  .assess-badge.underpriced { background: rgba(52,211,153,.15); color: var(--green); }
+  .assess-badge.at_market   { background: rgba(79,142,247,.12); color: var(--accent); }
+  .assess-badge.overpriced  { background: rgba(248,113,113,.15); color: var(--red); }
+  /* Factor grid */
+  .factor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
   .factor-item { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 8px; background: #13161f; border-radius: 4px; }
-  .factor-val.up   { color: var(--green); }
-  .factor-val.down { color: var(--red); }
+  .factor-val.up      { color: var(--green); }
+  .factor-val.down    { color: var(--red); }
   .factor-val.neutral { color: var(--muted); }
+  /* Comp table */
+  .comp-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+  .comp-table th { color: var(--muted); font-weight: 600; text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+  .comp-table td { padding: 5px 8px; border-bottom: 1px solid #1e2130; }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table .est { text-align: right; font-weight: 600; color: var(--accent); }
+  .comp-table .err { color: var(--muted); font-style: italic; }
+  /* Result sections */
+  .result-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .result-section-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
   /* Flags */
   .flags-list { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .flag-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
@@ -84,6 +112,7 @@
   .flag-addr { font-weight: 600; font-size: 12px; }
   .empty { color: var(--muted); padding: 20px; text-align: center; }
   #loading { color: var(--muted); font-size: 12px; }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 3px; }
 </style>
 </head>
 <body>
@@ -140,94 +169,160 @@
 
   <h2>Offer Price Calculator</h2>
   <div class="calc-grid">
+
+    <!-- ── LEFT: Form ─────────────────────────────────────────────────── -->
     <div class="calc-form">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Zip Code</label>
-          <select id="f-zip">
-            <option value="94526">94526 — Danville</option>
-            <option value="94506">94506 — Danville</option>
-            <option value="94563">94563 — Orinda</option>
-            <option value="94549">94549 — Lafayette</option>
-            <option value="94556">94556 — Moraga</option>
-            <option value="94595">94595 — Walnut Creek</option>
-            <option value="94596">94596 — Walnut Creek</option>
-            <option value="94597">94597 — Walnut Creek</option>
-            <option value="94598">94598 — Walnut Creek</option>
-            <option value="94507">94507 — Alamo</option>
-            <option value="94582">94582 — San Ramon</option>
-            <option value="94583">94583 — San Ramon</option>
-            <option value="94702">94702 — Berkeley</option>
-            <option value="94703">94703 — Berkeley</option>
-            <option value="94704">94704 — Berkeley</option>
-            <option value="94705">94705 — Berkeley</option>
-            <option value="94707">94707 — Berkeley</option>
-            <option value="94708">94708 — Berkeley</option>
-            <option value="94709">94709 — Berkeley</option>
-            <option value="94710">94710 — Berkeley</option>
-          </select>
+
+      <!-- Section 1: Location & Listing -->
+      <div class="form-section">
+        <div class="section-label">Listing Details</div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Property Address</label>
+            <input type="text" id="f-address" placeholder="123 Oak Lane, Danville, CA">
+            <div class="hint">Full address or leave blank and select a zip below</div>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Year Built</label>
-          <input type="number" id="f-year" value="2000" min="1850" max="2026">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Current List Price ($)</label>
+            <input type="number" id="f-list-cur" placeholder="1500000" min="0" step="1000">
+          </div>
+          <div class="form-group">
+            <label>Original List Price ($)</label>
+            <input type="number" id="f-list-orig" placeholder="1595000" min="0" step="1000">
+            <div class="hint">Leave blank if no reduction</div>
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Living Sqft</label>
-          <input type="number" id="f-sqft" value="2000" min="300" max="15000">
-        </div>
-        <div class="form-group">
-          <label>Lot Sqft</label>
-          <input type="number" id="f-lot" value="7000" min="0">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Days on Market</label>
+            <input type="number" id="f-dom" placeholder="14" min="0" max="999">
+          </div>
+          <div class="form-group" style="justify-content:flex-end;padding-bottom:4px">
+            <label>&nbsp;</label>
+            <label class="toggle-item" style="height:38px">
+              <input type="checkbox" id="f-bom">
+              <span>Previously Removed / Back on Market</span>
+            </label>
+          </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Bedrooms</label>
-          <input type="number" id="f-beds" value="4" min="1" max="10">
+
+      <!-- Section 2: Property Details -->
+      <div class="form-section">
+        <div class="section-label">Property Details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Zip Code (if no address)</label>
+            <select id="f-zip">
+              <option value="">— select —</option>
+              <option value="94526">94526 — Danville</option>
+              <option value="94506">94506 — Danville</option>
+              <option value="94563">94563 — Orinda</option>
+              <option value="94549">94549 — Lafayette</option>
+              <option value="94556">94556 — Moraga</option>
+              <option value="94595">94595 — Walnut Creek</option>
+              <option value="94596">94596 — Walnut Creek</option>
+              <option value="94597">94597 — Walnut Creek</option>
+              <option value="94598">94598 — Walnut Creek</option>
+              <option value="94507">94507 — Alamo</option>
+              <option value="94582">94582 — San Ramon</option>
+              <option value="94583">94583 — San Ramon</option>
+              <option value="94702">94702 — Berkeley</option>
+              <option value="94703">94703 — Berkeley</option>
+              <option value="94704">94704 — Berkeley</option>
+              <option value="94705">94705 — Berkeley</option>
+              <option value="94707">94707 — Berkeley</option>
+              <option value="94708">94708 — Berkeley</option>
+              <option value="94709">94709 — Berkeley</option>
+              <option value="94710">94710 — Berkeley</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year Built</label>
+            <input type="number" id="f-year" value="2000" min="1850" max="2026">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Bathrooms</label>
-          <input type="number" id="f-baths" value="2.5" min="1" max="10" step="0.5">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Living Sqft</label>
+            <input type="number" id="f-sqft" value="2000" min="300" max="15000">
+          </div>
+          <div class="form-group">
+            <label>Lot Sqft</label>
+            <input type="number" id="f-lot" value="7000" min="0">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bedrooms</label>
+            <input type="number" id="f-beds" value="4" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label>Bathrooms</label>
+            <input type="number" id="f-baths" value="2.5" min="1" max="10" step="0.5">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>View Score (0–2)</label>
+            <select id="f-view">
+              <option value="0">0 — None</option>
+              <option value="1">1 — Partial</option>
+              <option value="2">2 — Panoramic</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Slope Grade (0–100)</label>
+            <input type="number" id="f-slope" value="0" min="0" max="100">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>HOA / Month ($)</label>
+            <input type="number" id="f-hoa" value="0" min="0">
+          </div>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle-item"><input type="checkbox" id="f-pool"><span>Pool</span></label>
+          <label class="toggle-item"><input type="checkbox" id="f-busy"><span>Busy Street</span></label>
+          <label class="toggle-item"><input type="checkbox" id="f-corner"><span>Corner Lot</span></label>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>View Score (0–2)</label>
-          <select id="f-view">
-            <option value="0">0 — None</option>
-            <option value="1">1 — Partial</option>
-            <option value="2">2 — Panoramic</option>
-          </select>
+
+      <!-- Section 3: Comp Addresses -->
+      <div class="form-section">
+        <div class="section-label">Comparable Homes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional, up to 5)</span></div>
+        <div class="hint" style="margin-bottom:10px">Model will blend 40% comp average + 60% ML estimate</div>
+        <div id="comp-inputs">
+          <div class="form-row full" style="margin-bottom:8px">
+            <div class="form-group">
+              <label>Comp 1</label>
+              <input type="text" class="comp-addr" placeholder="456 Elm St, Danville, CA">
+            </div>
+          </div>
+          <div class="form-row full" style="margin-bottom:8px">
+            <div class="form-group">
+              <label>Comp 2</label>
+              <input type="text" class="comp-addr" placeholder="789 Oak Ave, Danville, CA">
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Slope Grade (0–100)</label>
-          <input type="number" id="f-slope" value="0" min="0" max="100">
-        </div>
+        <button class="secondary" id="add-comp-btn" onclick="addComp()" style="margin-top:4px">+ Add Comp</button>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>HOA / Month ($)</label>
-          <input type="number" id="f-hoa" value="0" min="0">
-        </div>
-        <div class="form-group" style="justify-content:flex-end;padding-top:4px">
-        </div>
-      </div>
-      <div class="toggle-row">
-        <label class="toggle-item"><input type="checkbox" id="f-pool"> Pool</label>
-        <label class="toggle-item"><input type="checkbox" id="f-busy"> Busy Street</label>
-        <label class="toggle-item"><input type="checkbox" id="f-corner"> Corner Lot</label>
-      </div>
+
       <button class="primary" onclick="runCalc()">Get Pricing Suggestion</button>
     </div>
 
+    <!-- ── RIGHT: Results ──────────────────────────────────────────────── -->
     <div class="calc-result" id="calc-result">
       <div style="color:var(--muted);font-size:13px;padding:20px 0">
-        Fill in property details and click <strong>Get Pricing Suggestion</strong>.
+        Fill in listing details and property characteristics, then click <strong>Get Pricing Suggestion</strong>.
       </div>
     </div>
-  </div>
+
+  </div><!-- /calc-grid -->
 
   <h2>Active Property Flags</h2>
   <div class="flags-list" id="flags-list">
@@ -245,10 +340,25 @@ const CITY_ZIPS = {
 };
 
 let zhviChart = null, predsChart = null;
+let compCount = 2;
+
+function addComp() {
+  if (compCount >= 5) {
+    document.getElementById('add-comp-btn').disabled = true;
+    return;
+  }
+  compCount++;
+  const container = document.getElementById('comp-inputs');
+  const div = document.createElement('div');
+  div.className = 'form-row full';
+  div.style.marginBottom = '8px';
+  div.innerHTML = `<div class="form-group"><label>Comp ${compCount}</label><input type="text" class="comp-addr" placeholder=""></div>`;
+  container.appendChild(div);
+  if (compCount >= 5) document.getElementById('add-comp-btn').disabled = true;
+}
 
 async function loadSummary() {
   const data = await fetch(`${API}/dashboard/summary`).then(r => r.json());
-  // Indicators
   for (const ind of data.indicators) {
     if (ind.series_id === 'MORTGAGE30US') document.getElementById('ind-rate').textContent = ind.value.toFixed(2) + '%';
     if (ind.series_id === 'UMCSENT')      document.getElementById('ind-umcsent').textContent = ind.value.toFixed(1);
@@ -256,8 +366,6 @@ async function loadSummary() {
     if (ind.series_id === 'SFXRSA')       document.getElementById('ind-sfhpi').textContent = ind.value.toFixed(1);
   }
   document.getElementById('as-of').textContent = 'As of ' + new Date().toLocaleDateString();
-
-  // City table
   const tbody = document.getElementById('city-tbody');
   tbody.innerHTML = '';
   for (const row of data.cities) {
@@ -296,8 +404,7 @@ async function loadZHVI() {
   const ctx = document.getElementById('zhviChart').getContext('2d');
   if (zhviChart) zhviChart.destroy();
   zhviChart = new Chart(ctx, {
-    type: 'line',
-    data: { datasets },
+    type: 'line', data: { datasets },
     options: {
       animation: false,
       scales: {
@@ -319,13 +426,9 @@ async function loadPredictions() {
     type: 'bar',
     data: {
       labels: preds.map((p, i) => `#${preds.length - i}`).reverse(),
-      datasets: [{
-        label: 'Suggested Offer',
+      datasets: [{ label: 'Suggested Offer',
         data: [...preds].reverse().map(p => Math.round(p.suggested_offer / 1000)),
-        backgroundColor: '#4f8ef755',
-        borderColor: '#4f8ef7',
-        borderWidth: 1,
-      }]
+        backgroundColor: '#4f8ef755', borderColor: '#4f8ef7', borderWidth: 1 }]
     },
     options: {
       animation: false,
@@ -356,67 +459,176 @@ async function loadFlags() {
 }
 
 async function runCalc() {
+  const address = document.getElementById('f-address').value.trim();
+  const zip     = document.getElementById('f-zip').value;
+
+  if (!address && !zip) {
+    alert('Enter a property address or select a zip code.');
+    return;
+  }
+
+  const comps = [...document.querySelectorAll('.comp-addr')]
+    .map(el => el.value.trim()).filter(Boolean);
+
   const payload = {
-    zip_code:    document.getElementById('f-zip').value,
-    sqft_living: +document.getElementById('f-sqft').value || undefined,
-    sqft_lot:    +document.getElementById('f-lot').value || undefined,
-    bedrooms:    +document.getElementById('f-beds').value || undefined,
-    bathrooms:   +document.getElementById('f-baths').value || undefined,
-    year_built:  +document.getElementById('f-year').value || undefined,
-    view_score:  +document.getElementById('f-view').value,
-    slope_grade: +document.getElementById('f-slope').value,
-    hoa_monthly: +document.getElementById('f-hoa').value,
-    pool:        document.getElementById('f-pool').checked,
-    busy_street: document.getElementById('f-busy').checked,
-    corner_lot:  document.getElementById('f-corner').checked,
+    ...(address ? { address } : {}),
+    ...(zip      ? { zip_code: zip } : {}),
+    sqft_living:         +document.getElementById('f-sqft').value  || undefined,
+    sqft_lot:            +document.getElementById('f-lot').value   || undefined,
+    bedrooms:            +document.getElementById('f-beds').value  || undefined,
+    bathrooms:           +document.getElementById('f-baths').value || undefined,
+    year_built:          +document.getElementById('f-year').value  || undefined,
+    view_score:          +document.getElementById('f-view').value,
+    slope_grade:         +document.getElementById('f-slope').value,
+    hoa_monthly:         +document.getElementById('f-hoa').value,
+    pool:                document.getElementById('f-pool').checked,
+    busy_street:         document.getElementById('f-busy').checked,
+    corner_lot:          document.getElementById('f-corner').checked,
+    current_list_price:  +document.getElementById('f-list-cur').value  || undefined,
+    original_list_price: +document.getElementById('f-list-orig').value || undefined,
+    days_on_market:      +document.getElementById('f-dom').value        || undefined,
+    previously_removed:  document.getElementById('f-bom').checked,
+    comps: comps.length ? comps : undefined,
   };
+
   const el = document.getElementById('calc-result');
   el.innerHTML = '<div style="color:var(--muted);padding:20px">Running model…</div>';
+
   try {
     const res = await fetch(`${API}/price`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).then(r => r.json());
 
-    const factors = res.property_factors || {};
-    const factorHTML = Object.entries(factors).map(([k, v]) => {
-      const cls = v > 1.01 ? 'up' : v < 0.99 ? 'down' : 'neutral';
-      const pct = ((v - 1) * 100).toFixed(1);
-      return `<div class="factor-item"><span>${k}</span><span class="factor-val ${cls}">${pct > 0 ? '+' : ''}${pct}%</span></div>`;
-    }).join('');
+    if (res.detail) { el.innerHTML = `<div style="color:var(--red);padding:10px">${res.detail}</div>`; return; }
 
-    el.innerHTML = `
-      <div class="result-row"><span class="result-label">City</span><span class="result-val">${res.city}</span></div>
-      <div class="result-row"><span class="result-label">ML Baseline</span><span class="result-val accent">${fmt(res.ml_estimate)}</span></div>
-      <div class="result-row"><span class="result-label">Adjusted Estimate</span><span class="result-val">${fmt(res.adjusted_estimate)}</span></div>
-      <div class="result-row"><span class="result-label">Confidence Range</span><span class="result-val" style="font-size:13px">${fmt(res.confidence_low)} – ${fmt(res.confidence_high)}</span></div>
-      <div class="result-row">
-        <span class="result-label">Suggested Offer</span>
-        <span class="result-val big">${fmt(res.suggested_offer)}</span>
-      </div>
-      <div class="result-row">
-        <span class="result-label">Strategy</span>
-        <span class="strategy-badge ${res.offer_strategy}">${res.offer_strategy.toUpperCase()}</span>
-      </div>
-      <div style="margin-top:12px">
-        <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Property Adjustments</div>
-        <div class="factor-grid">${factorHTML}</div>
-      </div>
-      <div style="margin-top:14px;font-size:11px;color:var(--muted)">
-        DOM ${res.market_context.median_dom}d ·
-        List/Sale ${res.market_context.list_to_sale_ratio ? (res.market_context.list_to_sale_ratio * 100).toFixed(1) + '%' : '—'} ·
-        Rate ${res.market_context.mortgage_rate_30y}%
-      </div>
-    `;
-    // Refresh predictions chart
+    el.innerHTML = buildResult(res);
     loadPredictions();
   } catch (e) {
     el.innerHTML = `<div style="color:var(--red);padding:10px">Error: ${e.message}</div>`;
   }
 }
 
+function buildResult(res) {
+  const la = res.listing_analysis || {};
+  const ca = res.comp_analysis;
+  const factors = res.property_factors || {};
+
+  // ── Core estimate ──────────────────────────────────────────────────────────
+  let html = `
+    <div class="result-row"><span class="result-label">City</span><span class="result-val">${res.city}</span></div>
+    ${res.address ? `<div class="result-row"><span class="result-label">Address</span><span class="result-val" style="font-size:12px;max-width:55%;text-align:right">${res.address}</span></div>` : ''}
+    <div class="result-row"><span class="result-label">ML Baseline</span><span class="result-val accent">${fmt(res.ml_estimate)}</span></div>
+    <div class="result-row"><span class="result-label">Adjusted Estimate</span><span class="result-val">${fmt(res.adjusted_estimate)}</span></div>
+    <div class="result-row"><span class="result-label">Confidence Range</span><span class="result-val" style="font-size:12px">${fmt(res.confidence_low)} – ${fmt(res.confidence_high)}</span></div>
+    <div class="result-row">
+      <span class="result-label">Suggested Offer${ca && ca.n_valid > 0 ? ' <span style="font-size:10px;color:var(--muted)">(comp-blended)</span>' : ''}</span>
+      <span class="result-val big">${fmt(res.suggested_offer)}</span>
+    </div>
+    <div class="result-row">
+      <span class="result-label">Strategy</span>
+      <span class="strategy-badge ${res.offer_strategy}">${res.offer_strategy.toUpperCase()}</span>
+    </div>
+  `;
+
+  // ── Listing analysis (only if list price was provided) ────────────────────
+  if (la.current_list_price) {
+    const redHTML = la.price_reduction > 0
+      ? `<div class="result-row"><span class="result-label">Price Reduction</span><span class="result-val" style="color:var(--red)">−${fmt(la.price_reduction)} (${la.price_reduction_pct}%)</span></div>`
+      : '';
+    const domHTML = la.property_dom !== undefined
+      ? `<div class="result-row"><span class="result-label">Days on Market</span><span class="result-val" style="font-size:13px">${la.property_dom}d
+          ${la.dom_vs_market_pct !== undefined ? `<span style="font-size:11px;color:${la.dom_vs_market_pct > 20 ? 'var(--red)' : la.dom_vs_market_pct < -20 ? 'var(--green)' : 'var(--muted)'}">(${la.dom_vs_market_pct > 0 ? '+' : ''}${la.dom_vs_market_pct}% vs mkt)</span>` : ''}
+        </span></div>`
+      : '';
+    const bomHTML = la.previously_removed
+      ? `<div class="result-row"><span class="result-label">Back on Market</span><span class="result-val" style="font-size:12px;color:var(--yellow)">Yes · −3% penalty applied</span></div>`
+      : '';
+
+    html += `
+      <div class="result-section">
+        <div class="result-section-label">Listing Analysis</div>
+        <div class="result-row">
+          <span class="result-label">Current List Price</span>
+          <span class="result-val" style="font-size:13px">${fmt(la.current_list_price)}</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">vs. Model Estimate</span>
+          <span>
+            <span class="assess-badge ${la.list_price_assessment}">${la.list_price_assessment.replace('_', ' ').toUpperCase()}</span>
+            <span class="result-val" style="font-size:12px;margin-left:6px;color:${la.list_vs_estimate_pct > 0 ? 'var(--red)' : 'var(--green)'}">${la.list_vs_estimate_pct > 0 ? '+' : ''}${la.list_vs_estimate_pct}%</span>
+          </span>
+        </div>
+        ${redHTML}
+        ${domHTML}
+        ${bomHTML}
+      </div>
+    `;
+  }
+
+  // ── Comp analysis ─────────────────────────────────────────────────────────
+  if (ca && ca.comps && ca.comps.length > 0) {
+    const rows = ca.comps.map(c => `
+      <tr>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.address}</td>
+        <td>${c.city || '—'}</td>
+        ${c.estimate ? `<td class="est">${fmt(c.estimate)}</td>` : `<td class="err">${c.error || 'error'}</td>`}
+      </tr>
+    `).join('');
+
+    html += `
+      <div class="result-section">
+        <div class="result-section-label">Comp Analysis (${ca.n_valid} valid / ${ca.comps.length} provided)</div>
+        <table class="comp-table">
+          <thead><tr><th>Address</th><th>City</th><th style="text-align:right">Estimate</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${ca.comp_avg ? `
+          <div class="result-row" style="margin-top:8px">
+            <span class="result-label">Comp Average</span>
+            <span class="result-val accent" style="font-size:13px">${fmt(ca.comp_avg)}</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Blended (60% ML / 40% comps)</span>
+            <span class="result-val" style="color:var(--green)">${fmt(ca.blended_price)}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // ── Property adjustments ──────────────────────────────────────────────────
+  const factorHTML = Object.entries(factors).map(([k, v]) => {
+    const cls = v > 1.01 ? 'up' : v < 0.99 ? 'down' : 'neutral';
+    const pct = ((v - 1) * 100).toFixed(1);
+    return `<div class="factor-item"><span>${k}</span><span class="factor-val ${cls}">${pct > 0 ? '+' : ''}${pct}%</span></div>`;
+  }).join('');
+
+  if (factorHTML) {
+    html += `
+      <div class="result-section">
+        <div class="result-section-label">Property Adjustments</div>
+        <div class="factor-grid">${factorHTML}</div>
+      </div>
+    `;
+  }
+
+  // ── Market context footer ─────────────────────────────────────────────────
+  const mc = res.market_context || {};
+  html += `
+    <div style="margin-top:14px;font-size:11px;color:var(--muted)">
+      Market DOM ${mc.median_dom}d ·
+      List/Sale ${mc.list_to_sale_ratio ? (mc.list_to_sale_ratio * 100).toFixed(1) + '%' : '—'} ·
+      Rate ${mc.mortgage_rate_30y}% ·
+      Demand index ${mc.search_demand_index ? (+mc.search_demand_index).toFixed(0) : '—'}
+    </div>
+  `;
+
+  return html;
+}
+
 function fmt(v) {
-  if (!v) return '—';
+  if (!v && v !== 0) return '—';
   return '$' + Math.round(v).toLocaleString();
 }
 
@@ -427,7 +639,7 @@ async function init() {
 }
 
 init();
-setInterval(init, 5 * 60 * 1000); // refresh every 5 min
+setInterval(init, 5 * 60 * 1000);
 </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 """
 Home Pricing API — FastAPI
-POST /price  →  pricing suggestion for an address
+POST /price  →  pricing suggestion for a property
 GET  /health →  liveness check
 GET  /market/{zip_code} → current market snapshot
 """
@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 sys.path.insert(0, str(pathlib.Path(__file__).parents[1]))
 from model.predict import predict_for_zip
@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 app = FastAPI(
     title="CA Home Pricing API",
     description="Pricing suggestions for East Bay CA residential homes",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(
@@ -39,11 +39,12 @@ app.add_middleware(
 
 _dashboard = pathlib.Path(__file__).parent.parent / "dashboard"
 
+
 @app.get("/", include_in_schema=False)
 def serve_dashboard():
     return FileResponse(_dashboard / "index.html")
 
-# Zip → city mapping
+
 ZIP_TO_CITY = {
     "94702": "Berkeley",  "94703": "Berkeley",  "94704": "Berkeley",
     "94705": "Berkeley",  "94706": "Berkeley",  "94707": "Berkeley",
@@ -60,7 +61,11 @@ ZIP_TO_CITY = {
 
 
 class PriceRequest(BaseModel):
-    zip_code: str = Field(..., description="5-digit zip code")
+    # ── Location — provide address OR zip_code (address takes priority) ────────
+    address:     Optional[str] = Field(None, description="Full street address, e.g. '123 Main St, Danville, CA'")
+    zip_code:    Optional[str] = Field(None, description="5-digit zip code (used if address not provided)")
+
+    # ── Property characteristics ───────────────────────────────────────────────
     sqft_living:  Optional[int]   = Field(None, description="Interior square footage")
     sqft_lot:     Optional[int]   = Field(None, description="Lot square footage")
     bedrooms:     Optional[int]   = Field(None, ge=0, le=20)
@@ -73,11 +78,31 @@ class PriceRequest(BaseModel):
     slope_grade:  Optional[int]   = Field(0, ge=0, le=100, description="Slope severity 0–100")
     hoa_monthly:  Optional[int]   = Field(0, ge=0)
 
+    # ── Listing signals ────────────────────────────────────────────────────────
+    current_list_price:  Optional[int]  = Field(None, ge=0, description="Current asking price")
+    original_list_price: Optional[int]  = Field(None, ge=0, description="Original list price (before any reductions)")
+    days_on_market:      Optional[int]  = Field(None, ge=0, description="Days this listing has been active")
+    previously_removed:  Optional[bool] = Field(False, description="Was this listing previously withdrawn/expired and re-listed?")
+
+    # ── Comparable homes ──────────────────────────────────────────────────────
+    comps: Optional[list[str]] = Field(
+        None,
+        max_length=5,
+        description="Up to 5 comparable property addresses",
+    )
+
+    @model_validator(mode="after")
+    def require_location(self):
+        if not self.address and not self.zip_code:
+            raise ValueError("Provide either 'address' or 'zip_code'")
+        return self
+
 
 class PriceResponse(BaseModel):
     zip_code:           str
     city:               str
     as_of:              str
+    address:            Optional[str]
     ml_estimate:        int
     adjusted_estimate:  int
     confidence_low:     int
@@ -88,6 +113,8 @@ class PriceResponse(BaseModel):
     combined_factor:    float
     top_ml_drivers:     dict
     market_context:     dict
+    listing_analysis:   dict
+    comp_analysis:      Optional[dict]
 
 
 @app.get("/health")
@@ -120,31 +147,78 @@ def market_snapshot(zip_code: str):
 
 @app.post("/price", response_model=PriceResponse)
 def price_address(req: PriceRequest):
-    zip_code = req.zip_code.strip().split("-")[0][:5]
+    resolved_address = req.address
+
+    # ── Resolve zip + city ────────────────────────────────────────────────────
+    if req.address:
+        try:
+            from data.geocode import geocode
+            geo = geocode(req.address)
+        except Exception as e:
+            log.warning(f"Geocoding failed for '{req.address}': {e}")
+            geo = {}
+
+        if not geo or not geo.get("in_target"):
+            if req.zip_code:
+                zip_code = req.zip_code.strip()[:5]
+                log.info(f"Geocoding failed/out-of-area — falling back to provided zip {zip_code}")
+            else:
+                detail = (
+                    f"Could not geocode '{req.address}' to a supported area. "
+                    "Provide a zip_code as fallback or check the address."
+                )
+                raise HTTPException(422, detail)
+        else:
+            zip_code = geo["zip_code"]
+    else:
+        zip_code = req.zip_code.strip().split("-")[0][:5]
+
     city = ZIP_TO_CITY.get(zip_code)
     if not city:
         raise HTTPException(
             400,
             f"Zip {zip_code} is not in our target area. "
-            f"Supported zips: {sorted(ZIP_TO_CITY.keys())}"
+            f"Supported zips: {sorted(ZIP_TO_CITY.keys())}",
         )
 
+    # ── Build property dict ───────────────────────────────────────────────────
+    listing_fields = {"address", "zip_code", "current_list_price", "original_list_price",
+                      "days_on_market", "previously_removed", "comps"}
     prop = {k: v for k, v in req.model_dump().items()
-            if k != "zip_code" and v is not None}
+            if k not in listing_fields and v is not None and v is not False}
 
+    # ── Core prediction ───────────────────────────────────────────────────────
     try:
-        result = predict_for_zip(zip_code, city, prop)
-    except FileNotFoundError:
-        raise HTTPException(
-            503,
-            "Model not trained yet. Run: python -m model.train"
+        result = predict_for_zip(
+            zip_code, city, prop,
+            current_list_price=req.current_list_price,
+            original_list_price=req.original_list_price,
+            days_on_market=req.days_on_market,
+            previously_removed=req.previously_removed or False,
         )
+    except FileNotFoundError:
+        raise HTTPException(503, "Model not trained yet. Run: python -m model.train")
     except Exception as e:
         log.exception("Prediction error")
         raise HTTPException(500, str(e))
 
     if "error" in result:
         raise HTTPException(422, result["error"])
+
+    # ── Comp analysis ─────────────────────────────────────────────────────────
+    comp_analysis = None
+    if req.comps:
+        try:
+            from model.comps import analyze_comps
+            comp_analysis = analyze_comps(req.comps, prop, result["adjusted_estimate"])
+            # If we got valid comps, use blended price as suggested offer
+            if comp_analysis.get("n_valid", 0) > 0:
+                result["suggested_offer"] = comp_analysis["blended_price"]
+        except Exception as e:
+            log.warning(f"Comp analysis failed: {e}")
+
+    result["address"]      = resolved_address
+    result["comp_analysis"] = comp_analysis
 
     return result
 
@@ -190,18 +264,17 @@ def zhvi_trend(zip_code: str, months: int = 24):
 
 @app.get("/dashboard/summary")
 def dashboard_summary():
-    """Aggregate market snapshot for all target cities — feeds dashboard."""
     rows = execute("""
         SELECT
             tc.city,
             tc.zip_codes,
             mm.metric_date,
-            ROUND(AVG(mm.median_list_price))  AS median_list_price,
-            ROUND(AVG(mm.median_sale_price))  AS median_sale_price,
-            ROUND(AVG(mm.median_dom))         AS median_dom,
-            ROUND(AVG(mm.list_to_sale_ratio), 4) AS list_to_sale_ratio,
-            ROUND(AVG(mm.active_listings))    AS active_listings,
-            ROUND(AVG(mm.price_cut_pct), 2)   AS price_cut_pct
+            ROUND(AVG(mm.median_list_price))     AS median_list_price,
+            ROUND(AVG(mm.median_sale_price))      AS median_sale_price,
+            ROUND(AVG(mm.median_dom))             AS median_dom,
+            ROUND(AVG(mm.list_to_sale_ratio), 4)  AS list_to_sale_ratio,
+            ROUND(AVG(mm.active_listings))        AS active_listings,
+            ROUND(AVG(mm.price_cut_pct), 2)       AS price_cut_pct
         FROM target_cities tc
         JOIN market_metrics mm
           ON FIND_IN_SET(mm.zip_code, REPLACE(tc.zip_codes, ' ', '')) > 0
@@ -214,7 +287,6 @@ def dashboard_summary():
         ORDER BY tc.city
     """, fetch=True)
 
-    # Latest FRED indicators
     fred_rows = execute("""
         SELECT series_id, value, indicator_date
         FROM economic_indicators e1

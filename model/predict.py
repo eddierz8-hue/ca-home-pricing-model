@@ -1,14 +1,8 @@
 """
 Full prediction pipeline.
-Input:  address string + optional property overrides
-Output: price estimate, confidence range, offer suggestion, key factors
-
-Architecture:
-  1. Geocode address → zip code
-  2. Pull latest market context for that zip from DB
-  3. ML ensemble → market baseline price
-  4. Hedonic adjustments → property-specific multipliers
-  5. Blend → suggested offer price + offer strategy
+Input:  zip_code + property characteristics + optional listing signals
+Output: price estimate, confidence range, offer suggestion, key factors,
+        listing analysis, optional comp blend
 """
 
 import sys
@@ -25,7 +19,7 @@ from model import hedonic, ml_model
 
 log = logging.getLogger(__name__)
 
-# City median property characteristics (from Census ACS for these East Bay cities)
+# City median property characteristics (Census ACS, East Bay)
 CITY_MEDIANS = {
     "Berkeley":      {"sqft": 1450, "lot": 4200,  "beds": 3, "baths": 1.5},
     "Orinda":        {"sqft": 2400, "lot": 16000, "beds": 4, "baths": 2.5},
@@ -79,10 +73,10 @@ def _latest_zhvi(zip_code: str) -> dict:
     lag3_val = rows[3]["home_value"] if len(rows) > 3 else latest["home_value"]
     mom      = (latest["home_value"] - lag1_val) / lag1_val if lag1_val else 0
     return {
-        "home_value":  float(latest["home_value"]),
-        "zhvi_lag1":   float(lag1_val),
-        "zhvi_lag3":   float(lag3_val),
-        "zhvi_mom":    float(mom),
+        "home_value": float(latest["home_value"]),
+        "zhvi_lag1":  float(lag1_val),
+        "zhvi_lag3":  float(lag3_val),
+        "zhvi_mom":   float(mom),
     }
 
 
@@ -124,38 +118,99 @@ def _latest_sentiment(city: str) -> dict:
     return {"search_volume_ma4": vol}
 
 
-def _offer_strategy(market: dict) -> str:
-    dom          = market.get("median_dom", 30)
-    lts          = market.get("list_to_sale_ratio", 1.0)
-    price_cuts   = market.get("price_cut_pct", 0) or 0
+def _offer_strategy(market: dict, property_dom: int | None) -> str:
+    """
+    Determine offer strategy.
+    If property_dom is provided, use it for the DOM test; otherwise fall back
+    to the market median DOM.  List-to-sale ratio always comes from market data.
+    """
+    effective_dom = property_dom if property_dom is not None else market.get("median_dom", 30)
+    lts           = market.get("list_to_sale_ratio", 1.0)
+    price_cuts    = market.get("price_cut_pct", 0) or 0
 
-    if dom < 14 and lts >= 1.02:
+    if effective_dom < 14 and lts >= 1.02:
         return "aggressive"
-    if dom > 45 or price_cuts > 0.25:
+    if effective_dom > 45 or price_cuts > 0.25:
         return "conservative"
     return "market"
 
 
-def _offer_price(estimate: float, strategy: str) -> int:
+def _offer_price(estimate: float, strategy: str, previously_removed: bool) -> int:
     multipliers = {"aggressive": 1.03, "market": 1.00, "conservative": 0.965}
-    return round(estimate * multipliers.get(strategy, 1.0))
+    mult = multipliers.get(strategy, 1.0)
+    if previously_removed:
+        mult *= 0.97  # -3% back-on-market penalty
+    return round(estimate * mult)
+
+
+def _listing_analysis(
+    estimate: float,
+    current_list_price: int | None,
+    original_list_price: int | None,
+    days_on_market: int | None,
+    previously_removed: bool,
+    market_dom: float,
+) -> dict:
+    """Produce informational listing signals (no model mutation)."""
+    analysis: dict = {
+        "previously_removed": previously_removed,
+    }
+
+    if current_list_price:
+        ratio = current_list_price / estimate
+        analysis["current_list_price"]    = current_list_price
+        analysis["list_vs_estimate_pct"]  = round((ratio - 1) * 100, 1)
+        analysis["list_price_assessment"] = (
+            "underpriced" if ratio < 0.95
+            else "overpriced" if ratio > 1.05
+            else "at_market"
+        )
+
+    if current_list_price and original_list_price:
+        analysis["original_list_price"] = original_list_price
+        if original_list_price > current_list_price:
+            reduction = original_list_price - current_list_price
+            analysis["price_reduction"]     = reduction
+            analysis["price_reduction_pct"] = round(reduction / original_list_price * 100, 1)
+        else:
+            analysis["price_reduction"]     = 0
+            analysis["price_reduction_pct"] = 0.0
+
+    if days_on_market is not None:
+        analysis["property_dom"] = days_on_market
+        if market_dom:
+            analysis["dom_vs_market_pct"] = round(
+                (days_on_market - market_dom) / market_dom * 100, 1
+            )
+
+    return analysis
 
 
 def predict_for_zip(
     zip_code: str,
     city: str,
     prop: dict,
+    *,
+    current_list_price: int | None = None,
+    original_list_price: int | None = None,
+    days_on_market: int | None = None,
+    previously_removed: bool = False,
+    _save: bool = True,
 ) -> dict:
     """
-    Full prediction for a known zip + property characteristics.
+    Full prediction for a known zip + property characteristics + optional listing signals.
+
     prop keys (all optional): sqft_living, sqft_lot, bedrooms, bathrooms,
       year_built, pool, view_score, corner_lot, busy_street, slope_grade, hoa_monthly
+
+    Listing signal keys:
+      current_list_price, original_list_price, days_on_market, previously_removed
     """
-    # ── 1. Build feature row from latest market data ──────────────────────────
-    fred    = _latest_fred()
-    zhvi    = _latest_zhvi(zip_code)
-    market  = _latest_market(zip_code)
-    sent    = _latest_sentiment(city)
+    # ── 1. Pull latest market context ────────────────────────────────────────
+    fred   = _latest_fred()
+    zhvi   = _latest_zhvi(zip_code)
+    market = _latest_market(zip_code)
+    sent   = _latest_sentiment(city)
 
     today = date.today()
     feature_row = {
@@ -178,30 +233,32 @@ def predict_for_zip(
     # ── 3. Hedonic property adjustments ──────────────────────────────────────
     city_med = CITY_MEDIANS.get(city, DEFAULT_MEDIANS)
     prop_with_medians = {
-        "median_sqft_zip": city_med["sqft"],
-        "median_lot_zip":  city_med["lot"],
-        "median_beds_zip": city_med["beds"],
-        "median_baths_zip":city_med["baths"],
+        "median_sqft_zip":  city_med["sqft"],
+        "median_lot_zip":   city_med["lot"],
+        "median_beds_zip":  city_med["beds"],
+        "median_baths_zip": city_med["baths"],
         **prop,
     }
-    adj = hedonic.apply_property_adjustments(ml_est, prop_with_medians)
-
+    adj       = hedonic.apply_property_adjustments(ml_est, prop_with_medians)
     final_est = adj["adjusted_price"]
 
-    # ── 4. Confidence interval (±10% from ML model) ───────────────────────────
+    # ── 4. Confidence interval (±10%) ────────────────────────────────────────
     ci_low  = round(final_est * 0.90)
     ci_high = round(final_est * 1.10)
 
-    # ── 5. Offer strategy ─────────────────────────────────────────────────────
-    strategy     = _offer_strategy(market)
-    offer_price  = _offer_price(final_est, strategy)
+    # ── 5. Offer strategy + price ─────────────────────────────────────────────
+    strategy    = _offer_strategy(market, days_on_market)
+    offer_price = _offer_price(final_est, strategy, previously_removed)
 
-    # ── 6. Market health summary ──────────────────────────────────────────────
-    dom    = market.get("median_dom", "?")
-    lts    = market.get("list_to_sale_ratio", "?")
-    inv    = market.get("active_listings", "?")
-    rate   = fred.get("mortgage_rate_30y", "?")
-    sent_v = feature_row.get("search_volume_ma4", "?")
+    # ── 6. Listing signals (informational) ───────────────────────────────────
+    listing = _listing_analysis(
+        final_est,
+        current_list_price,
+        original_list_price,
+        days_on_market,
+        previously_removed,
+        market.get("median_dom", 30),
+    )
 
     result = {
         "zip_code":          zip_code,
@@ -216,26 +273,42 @@ def predict_for_zip(
         "property_factors":  adj["factors"],
         "combined_factor":   adj["combined_factor"],
         "top_ml_drivers":    ml_result.get("top_factors", {}),
+        "listing_analysis":  listing,
         "market_context": {
-            "median_dom":         dom,
-            "list_to_sale_ratio": lts,
-            "active_listings":    inv,
-            "mortgage_rate_30y":  rate,
-            "search_demand_index":sent_v,
+            "median_dom":         market.get("median_dom", "?"),
+            "list_to_sale_ratio": market.get("list_to_sale_ratio", "?"),
+            "active_listings":    market.get("active_listings", "?"),
+            "mortgage_rate_30y":  fred.get("mortgage_rate_30y", "?"),
+            "search_demand_index": sent.get("search_volume_ma4", "?"),
         },
     }
 
-    # ── 7. Persist to model_predictions ──────────────────────────────────────
-    _save_prediction(result, prop)
+    if _save:
+        _save_prediction(result, prop)
 
     return result
 
 
 def _save_prediction(result: dict, prop: dict):
-    """Persist prediction to model_predictions table for tracking."""
     try:
-        feature_blob = json.dumps({**result["market_context"], **result["top_ml_drivers"],
-                                   **result["property_factors"]})
+        feature_blob = json.dumps({
+            **result["market_context"],
+            **result["top_ml_drivers"],
+            **result["property_factors"],
+        })
+        listing = result.get("listing_analysis", {})
+        notes = (
+            f"{result['city']} {result['zip_code']} | "
+            f"sqft={prop.get('sqft_living','?')} beds={prop.get('bedrooms','?')} "
+            f"baths={prop.get('bathrooms','?')} yr={prop.get('year_built','?')}"
+        )
+        if listing.get("current_list_price"):
+            notes += f" | list=${listing['current_list_price']:,}"
+        if listing.get("property_dom") is not None:
+            notes += f" dom={listing['property_dom']}d"
+        if listing.get("previously_removed"):
+            notes += " [BOM]"
+
         execute("""
             INSERT INTO model_predictions
                 (run_date, model_version, hedonic_estimate, ml_estimate,
@@ -243,8 +316,7 @@ def _save_prediction(result: dict, prop: dict):
                  suggested_offer, offer_strategy, feature_json, notes)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            result["as_of"],
-            "v0.1",
+            result["as_of"], "v0.2",
             result["adjusted_estimate"],
             result["ml_estimate"],
             result["adjusted_estimate"],
@@ -253,9 +325,7 @@ def _save_prediction(result: dict, prop: dict):
             result["suggested_offer"],
             result["offer_strategy"],
             feature_blob,
-            f"{result['city']} {result['zip_code']} | "
-            f"sqft={prop.get('sqft_living','?')} beds={prop.get('bedrooms','?')} "
-            f"baths={prop.get('bathrooms','?')} yr={prop.get('year_built','?')}",
+            notes,
         ))
     except Exception as e:
         log.warning(f"Could not save prediction to DB: {e}")

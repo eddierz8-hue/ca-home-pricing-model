@@ -13,6 +13,8 @@ from typing import Optional
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(pathlib.Path(__file__).parents[1]))
@@ -34,6 +36,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_dashboard = pathlib.Path(__file__).parent.parent / "dashboard"
+
+@app.get("/", include_in_schema=False)
+def serve_dashboard():
+    return FileResponse(_dashboard / "index.html")
 
 # Zip → city mapping
 ZIP_TO_CITY = {
@@ -139,6 +147,85 @@ def price_address(req: PriceRequest):
         raise HTTPException(422, result["error"])
 
     return result
+
+
+@app.get("/predictions/recent")
+def recent_predictions(limit: int = 20):
+    rows = execute("""
+        SELECT id, run_date, model_version, hedonic_estimate, ml_estimate,
+               ensemble_estimate, confidence_low, confidence_high,
+               suggested_offer, offer_strategy, notes
+        FROM model_predictions
+        ORDER BY run_date DESC, id DESC
+        LIMIT %s
+    """, (limit,), fetch=True)
+    return {"predictions": rows}
+
+
+@app.get("/flags/active")
+def active_flags():
+    rows = execute("""
+        SELECT pf.flag_date, pf.flag_type, pf.flag_detail,
+               p.address, p.city, p.zip_code
+        FROM property_flags pf
+        JOIN properties p ON p.id = pf.property_id
+        WHERE pf.is_active = TRUE
+        ORDER BY pf.flag_date DESC
+        LIMIT 50
+    """, fetch=True)
+    return {"flags": rows}
+
+
+@app.get("/zhvi/{zip_code}")
+def zhvi_trend(zip_code: str, months: int = 24):
+    rows = execute("""
+        SELECT metric_date, home_value, source
+        FROM zhvi
+        WHERE zip_code = %s
+          AND metric_date >= DATE_SUB(CURDATE(), INTERVAL %s MONTH)
+        ORDER BY metric_date ASC
+    """, (zip_code, months), fetch=True)
+    return {"zip_code": zip_code, "city": ZIP_TO_CITY.get(zip_code), "series": rows}
+
+
+@app.get("/dashboard/summary")
+def dashboard_summary():
+    """Aggregate market snapshot for all target cities — feeds dashboard."""
+    rows = execute("""
+        SELECT
+            tc.city,
+            tc.zip_codes,
+            mm.metric_date,
+            ROUND(AVG(mm.median_list_price))  AS median_list_price,
+            ROUND(AVG(mm.median_sale_price))  AS median_sale_price,
+            ROUND(AVG(mm.median_dom))         AS median_dom,
+            ROUND(AVG(mm.list_to_sale_ratio), 4) AS list_to_sale_ratio,
+            ROUND(AVG(mm.active_listings))    AS active_listings,
+            ROUND(AVG(mm.price_cut_pct), 2)   AS price_cut_pct
+        FROM target_cities tc
+        JOIN market_metrics mm
+          ON FIND_IN_SET(mm.zip_code, REPLACE(tc.zip_codes, ' ', '')) > 0
+        WHERE mm.metric_date = (
+            SELECT MAX(m2.metric_date) FROM market_metrics m2
+            WHERE FIND_IN_SET(m2.zip_code, REPLACE(tc.zip_codes, ' ', '')) > 0
+              AND m2.median_dom IS NOT NULL
+        )
+        GROUP BY tc.city, tc.zip_codes, mm.metric_date
+        ORDER BY tc.city
+    """, fetch=True)
+
+    # Latest FRED indicators
+    fred_rows = execute("""
+        SELECT series_id, value, indicator_date
+        FROM economic_indicators e1
+        WHERE series_id IN ('MORTGAGE30US','UMCSENT','FEDFUNDS','SFXRSA')
+          AND indicator_date = (
+              SELECT MAX(indicator_date) FROM economic_indicators e2
+              WHERE e2.series_id = e1.series_id
+          )
+    """, fetch=True)
+
+    return {"cities": rows, "indicators": fred_rows}
 
 
 if __name__ == "__main__":

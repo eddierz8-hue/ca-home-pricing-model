@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.homepricing.api</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/eddieramirez/home_pricing/.venv/bin/python</string>
+        <string>-m</string>
+        <string>uvicorn</string>
+        <string>api.main:app</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8002</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/eddieramirez/home_pricing</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/eddieramirez/home_pricing/api.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/eddieramirez/home_pricing/api.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>PYTHONPATH</key>
+        <string>/Users/eddieramirez/home_pricing</string>
+    </dict>
+</dict>
+</plist>

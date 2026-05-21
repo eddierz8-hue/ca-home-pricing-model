@@ -14,6 +14,7 @@ Architecture:
 import sys
 import pathlib
 import logging
+import json
 from datetime import date, timedelta
 
 import pandas as pd
@@ -202,7 +203,7 @@ def predict_for_zip(
     rate   = fred.get("mortgage_rate_30y", "?")
     sent_v = feature_row.get("search_volume_ma4", "?")
 
-    return {
+    result = {
         "zip_code":          zip_code,
         "city":              city,
         "as_of":             today.isoformat(),
@@ -223,3 +224,38 @@ def predict_for_zip(
             "search_demand_index":sent_v,
         },
     }
+
+    # ── 7. Persist to model_predictions ──────────────────────────────────────
+    _save_prediction(result, prop)
+
+    return result
+
+
+def _save_prediction(result: dict, prop: dict):
+    """Persist prediction to model_predictions table for tracking."""
+    try:
+        feature_blob = json.dumps({**result["market_context"], **result["top_ml_drivers"],
+                                   **result["property_factors"]})
+        execute("""
+            INSERT INTO model_predictions
+                (run_date, model_version, hedonic_estimate, ml_estimate,
+                 ensemble_estimate, confidence_low, confidence_high,
+                 suggested_offer, offer_strategy, feature_json, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            result["as_of"],
+            "v0.1",
+            result["adjusted_estimate"],
+            result["ml_estimate"],
+            result["adjusted_estimate"],
+            result["confidence_low"],
+            result["confidence_high"],
+            result["suggested_offer"],
+            result["offer_strategy"],
+            feature_blob,
+            f"{result['city']} {result['zip_code']} | "
+            f"sqft={prop.get('sqft_living','?')} beds={prop.get('bedrooms','?')} "
+            f"baths={prop.get('bathrooms','?')} yr={prop.get('year_built','?')}",
+        ))
+    except Exception as e:
+        log.warning(f"Could not save prediction to DB: {e}")

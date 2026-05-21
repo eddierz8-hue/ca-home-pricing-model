@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.homepricing.refresh</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/eddieramirez/home_pricing/.venv/bin/python</string>
+        <string>-m</string>
+        <string>scheduler.daily_refresh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/eddieramirez/home_pricing</string>
+
+    <!-- Run daily at 6:00 AM -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/eddieramirez/home_pricing/scheduler/refresh.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/eddieramirez/home_pricing/scheduler/refresh.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>PYTHONPATH</key>
+        <string>/Users/eddieramirez/home_pricing</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>

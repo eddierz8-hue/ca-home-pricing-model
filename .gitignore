@@ -12,3 +12,7 @@ model/saved/
 *.egg-info/
 dist/
 build/
+api.log
+api.err.log
+scheduler/refresh.log
+scheduler/refresh.err.log

@@ -57,13 +57,30 @@ def run():
     except Exception as e:
         log.error(f"Google Trends failed: {e}")
 
-    # ── 5. Generate property flags ────────────────────────────────────────────
+    # ── 5. Realtor.com market data ────────────────────────────────────────────
+    try:
+        from data.ingest.realtor_com import run_all as realtor_run
+        realtor_run()
+        log.info("Realtor.com: OK")
+    except Exception as e:
+        log.error(f"Realtor.com failed: {e}")
+
+    # ── 6. Generate property flags ────────────────────────────────────────────
     try:
         from scheduler.flag_engine import run as flags_run
         flags_run()
         log.info("Flag engine: OK")
     except Exception as e:
         log.error(f"Flag engine failed: {e}")
+
+    # ── 6. Retrain models on fresh data ───────────────────────────────────────
+    try:
+        from model.train import main as train_run
+        hedonic_m, ml_m = train_run()
+        log.info(f"Model retrain: hedonic R²={hedonic_m['cv_r2_mean']:.3f}, "
+                 f"ML R²={ml_m['xgb_r2']:.3f}")
+    except Exception as e:
+        log.error(f"Model retrain failed: {e}")
 
     log.info(f"=== Daily refresh complete {date.today()} ===")
 

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>East Bay Home Pricing Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3e;
+    --accent: #4f8ef7; --accent2: #7c5cbf; --green: #34d399;
+    --yellow: #fbbf24; --red: #f87171; --text: #e2e8f0; --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .badge { background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; margin-top: 28px; }
+  /* Indicators row */
+  .indicators { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 8px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .card .value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; }
+  .card .sub { color: var(--muted); font-size: 11px; }
+  /* Market table */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #13161f; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  th:first-child { text-align: left; }
+  td { padding: 11px 14px; border-bottom: 1px solid #1e2130; text-align: right; }
+  td:first-child { text-align: left; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .pill.hot  { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .pill.warm { background: rgba(79,142,247,.12); color: var(--accent); }
+  .pill.cool { background: rgba(148,163,184,.12); color: var(--muted); }
+  /* Charts */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .chart-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  /* Price calculator */
+  .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .calc-form { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .calc-result { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  input, select { background: #13161f; border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 8px 10px; font-size: 13px; width: 100%; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .toggle-row { display: flex; gap: 16px; margin-bottom: 12px; }
+  .toggle-item { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .toggle-item input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 4px; }
+  button.primary:hover { background: #3a7be0; }
+  .result-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .result-row:last-child { border-bottom: none; }
+  .result-label { color: var(--muted); font-size: 12px; }
+  .result-val { font-weight: 700; font-size: 16px; }
+  .result-val.big { font-size: 26px; color: var(--green); }
+  .result-val.accent { color: var(--accent); }
+  .strategy-badge { border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+  .strategy-badge.aggressive { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .strategy-badge.market     { background: rgba(79,142,247,.12); color: var(--accent); }
+  .strategy-badge.conservative { background: rgba(148,163,184,.12); color: var(--muted); }
+  .factor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .factor-item { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 8px; background: #13161f; border-radius: 4px; }
+  .factor-val.up   { color: var(--green); }
+  .factor-val.down { color: var(--red); }
+  .factor-val.neutral { color: var(--muted); }
+  /* Flags */
+  .flags-list { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .flag-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  .flag-item:last-child { border-bottom: none; }
+  .flag-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+  .flag-type.stale_listing    { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .flag-type.price_reduction  { background: rgba(248,113,113,.15); color: var(--red); }
+  .flag-type.multiple_reductions { background: rgba(248,113,113,.25); color: var(--red); }
+  .flag-type.new_listing      { background: rgba(52,211,153,.15); color: var(--green); }
+  .flag-type.below_estimate   { background: rgba(79,142,247,.15); color: var(--accent); }
+  .flag-detail { flex: 1; color: var(--muted); font-size: 12px; }
+  .flag-addr { font-weight: 600; font-size: 12px; }
+  .empty { color: var(--muted); padding: 20px; text-align: center; }
+  #loading { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>East Bay Home Pricing Dashboard</h1>
+    <div class="sub">Berkeley · Orinda · Moraga · Lafayette · Walnut Creek · Alamo · Danville · San Ramon</div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span id="loading"></span>
+    <span class="badge" id="as-of">Loading…</span>
+  </div>
+</header>
+
+<main>
+  <h2>Economic Indicators</h2>
+  <div class="indicators" id="indicators">
+    <div class="card"><div class="label">30-Yr Rate</div><div class="value" id="ind-rate">—</div><div class="sub">Mortgage</div></div>
+    <div class="card"><div class="label">Consumer Sentiment</div><div class="value" id="ind-umcsent">—</div><div class="sub">U Michigan Index</div></div>
+    <div class="card"><div class="label">Fed Funds</div><div class="value" id="ind-fedfunds">—</div><div class="sub">Target Rate</div></div>
+    <div class="card"><div class="label">SF Case-Shiller</div><div class="value" id="ind-sfhpi">—</div><div class="sub">HPI Index</div></div>
+  </div>
+
+  <h2>City Market Snapshot</h2>
+  <div class="table-wrap">
+    <table id="city-table">
+      <thead>
+        <tr>
+          <th>City</th>
+          <th>Median List</th>
+          <th>Median Sale</th>
+          <th>DOM</th>
+          <th>List/Sale</th>
+          <th>Inventory</th>
+          <th>Price Cuts</th>
+          <th>Market</th>
+        </tr>
+      </thead>
+      <tbody id="city-tbody"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <h2>ZHVI Trend</h2>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h3>Home Value Index by City (Upper Tier)</h3>
+      <div style="position:relative;height:260px"><canvas id="zhviChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Recent Predictions</h3>
+      <div style="position:relative;height:260px"><canvas id="predsChart"></canvas></div>
+    </div>
+  </div>
+
+  <h2>Offer Price Calculator</h2>
+  <div class="calc-grid">
+    <div class="calc-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Zip Code</label>
+          <select id="f-zip">
+            <option value="94526">94526 — Danville</option>
+            <option value="94506">94506 — Danville</option>
+            <option value="94563">94563 — Orinda</option>
+            <option value="94549">94549 — Lafayette</option>
+            <option value="94556">94556 — Moraga</option>
+            <option value="94595">94595 — Walnut Creek</option>
+            <option value="94596">94596 — Walnut Creek</option>
+            <option value="94597">94597 — Walnut Creek</option>
+            <option value="94598">94598 — Walnut Creek</option>
+            <option value="94507">94507 — Alamo</option>
+            <option value="94582">94582 — San Ramon</option>
+            <option value="94583">94583 — San Ramon</option>
+            <option value="94702">94702 — Berkeley</option>
+            <option value="94703">94703 — Berkeley</option>
+            <option value="94704">94704 — Berkeley</option>
+            <option value="94705">94705 — Berkeley</option>
+            <option value="94707">94707 — Berkeley</option>
+            <option value="94708">94708 — Berkeley</option>
+            <option value="94709">94709 — Berkeley</option>
+            <option value="94710">94710 — Berkeley</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Year Built</label>
+          <input type="number" id="f-year" value="2000" min="1850" max="2026">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Living Sqft</label>
+          <input type="number" id="f-sqft" value="2000" min="300" max="15000">
+        </div>
+        <div class="form-group">
+          <label>Lot Sqft</label>
+          <input type="number" id="f-lot" value="7000" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Bedrooms</label>
+          <input type="number" id="f-beds" value="4" min="1" max="10">
+        </div>
+        <div class="form-group">
+          <label>Bathrooms</label>
+          <input type="number" id="f-baths" value="2.5" min="1" max="10" step="0.5">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>View Score (0–2)</label>
+          <select id="f-view">
+            <option value="0">0 — None</option>
+            <option value="1">1 — Partial</option>
+            <option value="2">2 — Panoramic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Slope Grade (0–100)</label>
+          <input type="number" id="f-slope" value="0" min="0" max="100">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>HOA / Month ($)</label>
+          <input type="number" id="f-hoa" value="0" min="0">
+        </div>
+        <div class="form-group" style="justify-content:flex-end;padding-top:4px">
+        </div>
+      </div>
+      <div class="toggle-row">
+        <label class="toggle-item"><input type="checkbox" id="f-pool"> Pool</label>
+        <label class="toggle-item"><input type="checkbox" id="f-busy"> Busy Street</label>
+        <label class="toggle-item"><input type="checkbox" id="f-corner"> Corner Lot</label>
+      </div>
+      <button class="primary" onclick="runCalc()">Get Pricing Suggestion</button>
+    </div>
+
+    <div class="calc-result" id="calc-result">
+      <div style="color:var(--muted);font-size:13px;padding:20px 0">
+        Fill in property details and click <strong>Get Pricing Suggestion</strong>.
+      </div>
+    </div>
+  </div>
+
+  <h2>Active Property Flags</h2>
+  <div class="flags-list" id="flags-list">
+    <div class="empty">Loading…</div>
+  </div>
+</main>
+
+<script>
+const API = 'http://localhost:8002';
+const COLORS = ['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c','#38bdf8','#4ade80'];
+const CITIES = ['Berkeley','Orinda','Moraga','Lafayette','Walnut Creek','Alamo','Danville','San Ramon'];
+const CITY_ZIPS = {
+  'Berkeley':'94705','Orinda':'94563','Moraga':'94556','Lafayette':'94549',
+  'Walnut Creek':'94595','Alamo':'94507','Danville':'94526','San Ramon':'94582'
+};
+
+let zhviChart = null, predsChart = null;
+
+async function loadSummary() {
+  const data = await fetch(`${API}/dashboard/summary`).then(r => r.json());
+  // Indicators
+  for (const ind of data.indicators) {
+    if (ind.series_id === 'MORTGAGE30US') document.getElementById('ind-rate').textContent = ind.value.toFixed(2) + '%';
+    if (ind.series_id === 'UMCSENT')      document.getElementById('ind-umcsent').textContent = ind.value.toFixed(1);
+    if (ind.series_id === 'FEDFUNDS')     document.getElementById('ind-fedfunds').textContent = ind.value.toFixed(2) + '%';
+    if (ind.series_id === 'SFXRSA')       document.getElementById('ind-sfhpi').textContent = ind.value.toFixed(1);
+  }
+  document.getElementById('as-of').textContent = 'As of ' + new Date().toLocaleDateString();
+
+  // City table
+  const tbody = document.getElementById('city-tbody');
+  tbody.innerHTML = '';
+  for (const row of data.cities) {
+    const dom = row.median_dom ?? '—';
+    const lts = row.list_to_sale_ratio ? (row.list_to_sale_ratio * 100).toFixed(1) + '%' : '—';
+    const cuts = row.price_cut_pct ? row.price_cut_pct.toFixed(1) + '%' : '—';
+    const mktClass = dom !== '—' && dom < 14 ? 'hot' : dom < 35 ? 'warm' : 'cool';
+    const mktLabel = mktClass === 'hot' ? 'Hot' : mktClass === 'warm' ? 'Active' : 'Slow';
+    tbody.insertAdjacentHTML('beforeend', `<tr>
+      <td>${row.city}</td>
+      <td>${fmt(row.median_list_price)}</td>
+      <td>${fmt(row.median_sale_price)}</td>
+      <td>${dom}</td>
+      <td>${lts}</td>
+      <td>${row.active_listings ?? '—'}</td>
+      <td>${cuts}</td>
+      <td><span class="pill ${mktClass}">${mktLabel}</span></td>
+    </tr>`);
+  }
+}
+
+async function loadZHVI() {
+  const datasets = [];
+  for (let i = 0; i < CITIES.length; i++) {
+    const zip = CITY_ZIPS[CITIES[i]];
+    const data = await fetch(`${API}/zhvi/${zip}?months=24`).then(r => r.json());
+    if (!data.series || data.series.length === 0) continue;
+    datasets.push({
+      label: CITIES[i],
+      data: data.series.map(s => ({ x: s.metric_date, y: Math.round(s.home_value / 1000) })),
+      borderColor: COLORS[i % COLORS.length],
+      backgroundColor: 'transparent',
+      tension: 0.3, pointRadius: 0, borderWidth: 2,
+    });
+  }
+  const ctx = document.getElementById('zhviChart').getContext('2d');
+  if (zhviChart) zhviChart.destroy();
+  zhviChart = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      animation: false,
+      scales: {
+        x: { type: 'category', ticks: { color: '#64748b', maxTicksLimit: 8 }, grid: { color: '#1e2130' } },
+        y: { ticks: { color: '#64748b', callback: v => '$' + v + 'K' }, grid: { color: '#1e2130' } }
+      },
+      plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } } }
+    }
+  });
+}
+
+async function loadPredictions() {
+  const data = await fetch(`${API}/predictions/recent?limit=30`).then(r => r.json());
+  const preds = data.predictions || [];
+  if (!preds.length) return;
+  const ctx = document.getElementById('predsChart').getContext('2d');
+  if (predsChart) predsChart.destroy();
+  predsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: preds.map((p, i) => `#${preds.length - i}`).reverse(),
+      datasets: [{
+        label: 'Suggested Offer',
+        data: [...preds].reverse().map(p => Math.round(p.suggested_offer / 1000)),
+        backgroundColor: '#4f8ef755',
+        borderColor: '#4f8ef7',
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      animation: false,
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: '#1e2130' } },
+        y: { ticks: { color: '#64748b', callback: v => '$' + v + 'K' }, grid: { color: '#1e2130' } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+async function loadFlags() {
+  const data = await fetch(`${API}/flags/active`).then(r => r.json());
+  const el = document.getElementById('flags-list');
+  const flags = data.flags || [];
+  if (!flags.length) { el.innerHTML = '<div class="empty">No active flags</div>'; return; }
+  el.innerHTML = flags.slice(0, 20).map(f => `
+    <div class="flag-item">
+      <span class="flag-type ${f.flag_type}">${f.flag_type.replace(/_/g,' ')}</span>
+      <div>
+        <div class="flag-addr">${f.address ?? '—'}, ${f.city ?? ''}</div>
+        <div class="flag-detail">${f.flag_detail ?? ''}</div>
+      </div>
+      <span style="color:var(--muted);font-size:11px;white-space:nowrap">${f.flag_date}</span>
+    </div>
+  `).join('');
+}
+
+async function runCalc() {
+  const payload = {
+    zip_code:    document.getElementById('f-zip').value,
+    sqft_living: +document.getElementById('f-sqft').value || undefined,
+    sqft_lot:    +document.getElementById('f-lot').value || undefined,
+    bedrooms:    +document.getElementById('f-beds').value || undefined,
+    bathrooms:   +document.getElementById('f-baths').value || undefined,
+    year_built:  +document.getElementById('f-year').value || undefined,
+    view_score:  +document.getElementById('f-view').value,
+    slope_grade: +document.getElementById('f-slope').value,
+    hoa_monthly: +document.getElementById('f-hoa').value,
+    pool:        document.getElementById('f-pool').checked,
+    busy_street: document.getElementById('f-busy').checked,
+    corner_lot:  document.getElementById('f-corner').checked,
+  };
+  const el = document.getElementById('calc-result');
+  el.innerHTML = '<div style="color:var(--muted);padding:20px">Running model…</div>';
+  try {
+    const res = await fetch(`${API}/price`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(r => r.json());
+
+    const factors = res.property_factors || {};
+    const factorHTML = Object.entries(factors).map(([k, v]) => {
+      const cls = v > 1.01 ? 'up' : v < 0.99 ? 'down' : 'neutral';
+      const pct = ((v - 1) * 100).toFixed(1);
+      return `<div class="factor-item"><span>${k}</span><span class="factor-val ${cls}">${pct > 0 ? '+' : ''}${pct}%</span></div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="result-row"><span class="result-label">City</span><span class="result-val">${res.city}</span></div>
+      <div class="result-row"><span class="result-label">ML Baseline</span><span class="result-val accent">${fmt(res.ml_estimate)}</span></div>
+      <div class="result-row"><span class="result-label">Adjusted Estimate</span><span class="result-val">${fmt(res.adjusted_estimate)}</span></div>
+      <div class="result-row"><span class="result-label">Confidence Range</span><span class="result-val" style="font-size:13px">${fmt(res.confidence_low)} – ${fmt(res.confidence_high)}</span></div>
+      <div class="result-row">
+        <span class="result-label">Suggested Offer</span>
+        <span class="result-val big">${fmt(res.suggested_offer)}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Strategy</span>
+        <span class="strategy-badge ${res.offer_strategy}">${res.offer_strategy.toUpperCase()}</span>
+      </div>
+      <div style="margin-top:12px">
+        <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Property Adjustments</div>
+        <div class="factor-grid">${factorHTML}</div>
+      </div>
+      <div style="margin-top:14px;font-size:11px;color:var(--muted)">
+        DOM ${res.market_context.median_dom}d ·
+        List/Sale ${res.market_context.list_to_sale_ratio ? (res.market_context.list_to_sale_ratio * 100).toFixed(1) + '%' : '—'} ·
+        Rate ${res.market_context.mortgage_rate_30y}%
+      </div>
+    `;
+    // Refresh predictions chart
+    loadPredictions();
+  } catch (e) {
+    el.innerHTML = `<div style="color:var(--red);padding:10px">Error: ${e.message}</div>`;
+  }
+}
+
+function fmt(v) {
+  if (!v) return '—';
+  return '$' + Math.round(v).toLocaleString();
+}
+
+async function init() {
+  document.getElementById('loading').textContent = 'Loading…';
+  await Promise.all([loadSummary(), loadZHVI(), loadPredictions(), loadFlags()]);
+  document.getElementById('loading').textContent = '';
+}
+
+init();
+setInterval(init, 5 * 60 * 1000); // refresh every 5 min
+</script>
+</body>
+</html>

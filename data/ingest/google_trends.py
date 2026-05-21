@@ -35,34 +35,42 @@ def ingest(cutoff_years: int = 3):
     keywords = [f"homes for sale {c} CA" for c in TARGET_CITIES]
     rows = []
 
-    # Trends API allows max 5 keywords per request
+    # Trends API allows max 5 keywords per request; retry up to 3x on 429
     for i in range(0, len(keywords), 5):
         batch        = keywords[i:i + 5]
         cities_batch = TARGET_CITIES[i:i + 5]
-        try:
-            pytrends.build_payload(batch, geo=GEO, timeframe=timeframe)
-            df = pytrends.interest_over_time()
-            if df.empty:
-                log.warning(f"Empty response for batch: {batch}")
-                continue
-            df = df.drop(columns=["isPartial"], errors="ignore")
-            for kw, city in zip(batch, cities_batch):
-                if kw not in df.columns:
-                    continue
-                for idx, val in df[kw].items():
-                    rows.append((
-                        idx.date().isoformat(),
-                        city,
-                        None,
-                        "city",
-                        "google_trends",
-                        "search_volume_homes_for_sale",
-                        float(val),
-                    ))
-        except Exception as e:
-            log.warning(f"Trends batch failed {batch}: {e}")
+        for attempt in range(3):
+            try:
+                pytrends.build_payload(batch, geo=GEO, timeframe=timeframe)
+                df = pytrends.interest_over_time()
+                if df.empty:
+                    log.warning(f"Empty response for batch: {batch}")
+                    break
+                df = df.drop(columns=["isPartial"], errors="ignore")
+                for kw, city in zip(batch, cities_batch):
+                    if kw not in df.columns:
+                        continue
+                    for idx, val in df[kw].items():
+                        rows.append((
+                            idx.date().isoformat(),
+                            city,
+                            None,
+                            "city",
+                            "google_trends",
+                            "search_volume_homes_for_sale",
+                            float(val),
+                        ))
+                break  # success
+            except Exception as e:
+                if "429" in str(e) and attempt < 2:
+                    wait = 30 * (attempt + 1)
+                    log.warning(f"Rate limited, waiting {wait}s (attempt {attempt+1}/3)")
+                    time.sleep(wait)
+                else:
+                    log.warning(f"Trends batch failed {batch}: {e}")
+                    break
 
-        time.sleep(2)  # polite delay to avoid rate limiting
+        time.sleep(5)  # polite delay between batches
 
     if not rows:
         log.warning("No Google Trends data collected")

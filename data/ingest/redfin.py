@@ -43,11 +43,10 @@ def _fetch(url: str) -> pd.DataFrame:
     log.info(f"Fetching {url}")
     resp = requests.get(url, headers=HEADERS, timeout=120)
     resp.raise_for_status()
-    return pd.read_csv(
-        io.BytesIO(resp.content), sep="\t", compression="gzip",
-        dtype={"region": str, "region_id": str, "zip_code": str},
-        low_memory=False,
-    )
+    df = pd.read_csv(io.BytesIO(resp.content), sep="\t", compression="gzip", low_memory=False)
+    # Normalize to lowercase column names
+    df.columns = [c.lower() for c in df.columns]
+    return df
 
 
 def _filter_and_clean(df: pd.DataFrame, granularity: str, cutoff_years: int) -> pd.DataFrame:
@@ -56,17 +55,27 @@ def _filter_and_clean(df: pd.DataFrame, granularity: str, cutoff_years: int) -> 
     df = df[df["period_begin"] >= cutoff]
 
     if granularity == "zip":
-        if "zip_code" in df.columns:
-            df = df[df["zip_code"].isin(TARGET_ZIPS)]
-        elif "region" in df.columns:
-            df = df[df["region"].isin(TARGET_ZIPS)]
+        # Redfin formats zip regions as "Zip Code: 94507" — extract the numeric part
+        df["_zip"] = df["region"].str.extract(r"(\d{5})")
+        df = df[df["_zip"].isin(TARGET_ZIPS)]
     else:
-        df = df[df["region"].isin(TARGET_CITIES)]
+        df = df[df["city"].isin(TARGET_CITIES)]
         state_col = "state_code" if "state_code" in df.columns else "state"
         if state_col in df.columns:
             df = df[df[state_col] == "CA"]
 
     return df
+
+
+def _safe_str(v):
+    if v is None:
+        return None
+    try:
+        if pd.isna(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return str(v).strip() or None
 
 
 def _safe_int(v):
@@ -91,8 +100,8 @@ def ingest(granularity: str = "zip", cutoff_years: int = 3):
 
     rows = []
     for _, row in df.iterrows():
-        zip_val  = row.get("zip_code") if granularity == "zip" else None
-        city_val = row.get("region")   if granularity == "city" else row.get("city")
+        zip_val  = _safe_str(row.get("_zip")) if granularity == "zip" else None
+        city_val = _safe_str(row.get("city"))
         rows.append((
             row["period_begin"].date().isoformat(),
             city_val,
@@ -103,8 +112,8 @@ def ingest(granularity: str = "zip", cutoff_years: int = 3):
             _safe_int(row.get("median_sale_price")),
             _safe_int(row.get("median_dom")),
             _safe_float(row.get("months_of_supply")),
-            _safe_float(row.get("median_sale_to_list")),
-            _safe_float(row.get("percent_homes_with_price_drop")),
+            _safe_float(row.get("avg_sale_to_list")),   # actual column name
+            _safe_float(row.get("price_drops")),         # actual column name
             _safe_int(row.get("new_listings")),
             _safe_int(row.get("homes_sold")),
             "redfin",

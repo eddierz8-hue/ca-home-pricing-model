@@ -62,7 +62,7 @@ def _latest_zhvi(zip_code: str) -> dict:
     rows = execute("""
         SELECT home_value, metric_date
         FROM zhvi
-        WHERE zip_code = %s AND source = 'zhvi_sfr_upper'
+        WHERE zip_code = %s AND source = 'zhvi_sfr'
         ORDER BY metric_date DESC
         LIMIT 13
     """, (zip_code,), fetch=True)

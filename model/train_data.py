@@ -33,7 +33,7 @@ def _load_zhvi() -> pd.DataFrame:
     rows = execute("""
         SELECT zip_code, metric_date, home_value
         FROM zhvi
-        WHERE source = 'zhvi_sfr_upper'
+        WHERE source = 'zhvi_sfr'
         ORDER BY zip_code, metric_date
     """, fetch=True)
     df = pd.DataFrame(rows)
